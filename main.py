@@ -1,16 +1,21 @@
 #!/usr/bin/env python3
-"""Entry program for make.fun news-image-20261119.
+"""Copy the newspaper front-page image into the output directory.
 
-Writes the bundled image to /output/entry.png. No network access, no
-randomness: every run writes the same bytes.
+Reads entry.png from the directory containing this script, copies it to
+/output/entry.png (creating /output when it does not exist yet), and
+prints the SHA-256 digest of the copied file.
 """
+
 import hashlib
 import os
 import shutil
 import sys
 
 
-def _sha256(path):
+EXPECTED_SHA256 = "002ebf04dcbf3ef595cd57cced211d19810760dc82d53d904a15b4c0441333fd"
+
+
+def sha256_of(path):
     digest = hashlib.sha256()
     with open(path, "rb") as handle:
         for chunk in iter(lambda: handle.read(65536), b""):
@@ -21,16 +26,18 @@ def _sha256(path):
 def main():
     here = os.path.dirname(os.path.abspath(__file__))
     source = os.path.join(here, "entry.png")
-    if not os.path.isfile(source):
-        print("error: bundled entry.png is missing", file=sys.stderr)
-        raise SystemExit(1)
     os.makedirs("/output", exist_ok=True)
-    shutil.copyfile(source, "/output/entry.png")
-    if _sha256(source) != _sha256("/output/entry.png"):
-        print("error: /output/entry.png differs from the bundled entry.png",
-              file=sys.stderr)
-        raise SystemExit(1)
-    print("wrote /output/entry.png sha256=%s" % _sha256("/output/entry.png"))
+    target = os.path.join("/output", "entry.png")
+
+    shutil.copyfile(source, target)
+    result = sha256_of(target)
+    print(result)
+    if result != EXPECTED_SHA256:
+        print(
+            f"sha256 mismatch: expected {EXPECTED_SHA256}, got {result}",
+            file=sys.stderr,
+        )
+        sys.exit(1)
 
 
 if __name__ == "__main__":
